@@ -1,3 +1,5 @@
+//ORIGINAL AUTHOR: Dave Plummer
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
