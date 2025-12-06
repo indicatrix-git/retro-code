@@ -1,3 +1,5 @@
+//ORIGINAL AUTHOR: Hackman's Realm (https://lateblt.tripod.com/aboutme.htm)
+
 #include<bios.h> //Needed for the REGS structure
 
 void main()
