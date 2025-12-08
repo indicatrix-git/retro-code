@@ -1,6 +1,482 @@
+//Original author Martin Timko (http://indicatrix.wz.cz:8080/publications/uvod-do-pocitacovej-grafiky.pdf)
+
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace _3Drenderer
+{
+    public class Canvas
+    {
+        Color[,] canvas;
+        private int width;
+        private int height;
+
+        public Canvas(int w, int h)
+        {
+            this.width = w;
+            this.height = h;
+
+            canvas = new Color[w, h];
+        }
+
+
+        public void clearColor(Color background)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                for (int i = 0; i < width; i++)
+                {
+                    canvas[i, j] = background;
+                }
+            }
+        }
+
+
+        public void render()
+        {
+            var writer = new StreamWriter("frame.ppm");
+            writer.Write("P6" + " ");
+            writer.Write(Width + " " + Height + " ");
+            writer.Write("255" + " ");
+            writer.Close();
+
+            FileStream fs = new FileStream("frame.ppm", FileMode.Append);
+            BinaryWriter bw = new BinaryWriter(fs);
+
+            for (int y = 0; y < Height; ++y)
+            {
+                for (int x = 0; x < Width; ++x)
+                {
+                    Color color = getPixel(x, y);
+
+                    byte[] btColor = new byte[3];
+                    btColor[0] = color.R;
+                    btColor[1] = color.G;
+                    btColor[2] = color.B;
+
+                    bw.Write(btColor, 0, 3);
+                }
+            }
+            bw.Close();
+            fs.Close();
+        }
+
+
+        public void setPixel(int x, int y, Color color)
+        {
+            canvas[x, y] = color;
+        }
+
+
+        public Color getPixel(int x, int y)
+        {
+            return canvas[x, y];
+        }
+
+
+
+        public void drawLine(Color color, int x1, int y1, int x2, int y2)
+        {
+            if ((x1 - x2) > 0)
+            {
+                drawLine(color, x2, y2, x1, y1);
+                return;
+            }
+
+            if (Math.Abs(y2 - y1) > Math.Abs(x2 - x1))
+            {
+                bresteepline(color, y1, x1, y2, x2);
+                return;
+            }
+
+            int x = x1, y = y1, sum = x2 - x1,
+                Dx = 2 * (x2 - x1),
+                Dy = Math.Abs(2 * (y2 - y1));
+
+            int deltaDy = ((y2 - y1) > 0) ? 1 : -1;
+
+            for (int i = 0; i <= x2 - x1; i++)
+            {
+                setPixel(x, y, color);
+                x++;
+                sum -= Dy;
+
+                if (sum < 0)
+                {
+                    y = y + deltaDy; sum += Dx;
+                }
+            }
+        }
+
+
+        private void bresteepline(Color color, int x3, int y3, int x4, int y4)
+        {
+            if ((x3 - x4) > 0)
+            {
+                bresteepline(color, x4, y4, x3, y3);
+                return;
+            }
+
+            int x = x3, y = y3, sum = x4 - x3,
+                Dx = 2 * (x4 - x3),
+                Dy = Math.Abs(2 * (y4 - y3));
+
+            int deltaDy = ((y4 - y3) > 0) ? 1 : -1;
+
+            for (int i = 0; i <= x4 - x3; i++)
+            {
+                setPixel(y, x, color);
+                x++;
+                sum -= Dy;
+
+                if (sum < 0)
+                {
+                    y = y + deltaDy; sum += Dx;
+                }
+            }
+        }
+
+
+        public int Width
+        {
+            get { return this.width; }
+            set { this.width = value; }
+        }
+
+        public int Height
+        {
+            get { return this.height; }
+            set { this.height = value; }
+        }
+
+    }
+
+
+
+
+    class Projection
+    {
+        int[,] transformation = new int[8, 2];
+
+
+        public void Axonometric(int x, int y, int z, int n)
+        {
+            transformation[n, 0] = (int)(-x * Math.Cos(-0.7) + y *
+                        Math.Cos(0.8) + 800 / 2);
+            transformation[n, 1] = (int)(-x * Math.Sin(-0.3) - y *
+                        Math.Sin(-0.2) + z + 600 / 2);
+        }
+
+
+        public void Perspective(int x, int y, int z, int n)
+        {
+            int d = 150;
+            int s = 200;
+            int v = -75;
+
+            transformation[n, 0] = (int)((d * x + s * y) / (d + y) +
+                        800 / 2);
+            transformation[n, 1] = (int)((v * y + d * z) / (d + y) +
+                        600 / 2);
+        }
+
+
+        public int[,] Transformation
+        {
+            get
+            {
+                return transformation;
+            }
+        }
+    }
+
+
+    public class Color
+    {
+        private byte r;
+        private byte g;
+        private byte b;
+
+        public Color(byte r, byte g, byte b)
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+        }
+
+        public byte R
+        {
+            get { return this.r; }
+            set { this.r = value; }
+        }
+
+        public byte G
+        {
+            get { return this.g; }
+            set { this.g = value; }
+        }
+
+        public byte B
+        {
+            get { return this.b; }
+            set { this.b = value; }
+        }
+    }
+
+
+    internal class Program
+    {
+
+        static void Main(string[] args)
+        {
+
+            ////PRVA CAST
+            //Canvas canvas = new Canvas(800, 600);
+            //Color background = new Color(0, 0, 0);
+
+            //canvas.clearColor(background);
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+
+
+
+
+            ////DRUHA CAST
+            //int width = 800;
+            //int height = 600;
+
+            //Canvas canvas = new Canvas(width, height);
+
+            //Color background = new Color(0, 0, 0);
+            //Color white = new Color(255, 255, 255);
+
+            //canvas.clearColor(background);
+
+            //canvas.drawLine(white, 300, 200, 400, 300);
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+
+
+
+
+            ////TRETIA CAST
+            //int width = 800;
+            //int height = 600;
+
+            //Canvas canvas = new Canvas(width, height);
+
+            //Color background = new Color(0, 0, 0);
+            //Color white = new Color(255, 255, 255);
+
+            //canvas.clearColor(background);
+
+
+            //int[,] mVertices = { { 300, 200 }, { 400, 300 } };
+            //int[,] mIndices = {
+            //                     { 0, 1 },
+            //                     { 1, 0 }
+            //                  };
+
+            //int x1, y1, x2, y2;
+
+            //for (int i = 0; i < 2; i++)
+            //{
+            //    for (int j = i; j < 2; j++)
+            //    {
+            //        if (mIndices[i, j] == 1)
+            //        {
+            //            x1 = mVertices[i, 0];
+            //            y1 = mVertices[i, 1];
+            //            x2 = mVertices[j, 0];
+            //            y2 = mVertices[j, 1];
+            //            canvas.drawLine(white, x1, y1, x2, y2);
+            //        }
+            //    }
+            //}
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+
+
+
+
+
+
+            ////STVRTACAST
+            //int width = 800;
+            //int height = 600;
+
+            //Canvas canvas = new Canvas(width, height);
+
+            //Color background = new Color(0, 0, 0);
+            //Color white = new Color(255, 255, 255);
+
+            //canvas.clearColor(background);
+
+
+            //int[,] mVertices = { { 300, 200 }, { 400, 200 },
+            //            { 300, 300 }, { 400, 300 } };
+
+            //int[,] mIndices = {
+            //                       { 0, 1, 1, 0 },
+            //                       { 1, 0, 0, 1 },
+            //                       { 1, 0, 0, 1 },
+            //                       { 0, 1, 1, 0 }
+            //                  };
+
+            //int x1, y1, x2, y2;
+
+            //for (int i = 0; i < 4; i++)
+            //{
+            //    for (int j = i; j < 4; j++)
+            //    {
+            //        if (mIndices[i, j] == 1)
+            //        {
+            //            x1 = mVertices[i, 0];
+            //            y1 = mVertices[i, 1];
+            //            x2 = mVertices[j, 0];
+            //            y2 = mVertices[j, 1];
+            //            canvas.drawLine(white, x1, y1, x2, y2);
+            //        }
+            //    }
+            //}
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+
+
+
+
+
+            ////PIATACAST
+            //int width = 800;
+            //int height = 600;
+
+            //Canvas canvas = new Canvas(width, height);
+            //Projection projection = new Projection();
+
+            //Color background = new Color(0, 0, 0);
+            //Color white = new Color(255, 255, 255);
+
+            //canvas.clearColor(background);
+
+            //int[,] mVertices = { { 0, 0, 0 }, { 100, 0, 0 }, { 100, 0, 100 },
+            //            { 0, 0, 100 }, { 0, 100, 0 }, { 100, 100, 0 }, { 100, 100, 100 },
+            //            { 0, 100, 100 } };
+
+
+            //int[,] mIndices = {
+            //                              { 0, 1, 0, 1, 1, 0, 0, 0 },
+            //                              { 1, 0, 1, 0, 0, 1, 0, 0 },
+            //                              { 0, 1, 0, 1, 0, 0, 1, 0 },
+            //                              { 1, 0, 1, 0, 0, 0, 0, 1 },
+            //                              { 1, 0, 0, 0, 0, 1, 0, 1 },
+            //                              { 0, 1, 0, 0, 1, 0, 1, 0 },
+            //                              { 0, 0, 1, 0, 0, 1, 0, 1 },
+            //                              { 0, 0, 0, 1, 1, 0, 0, 0 },
+            //                          };
+
+
+            //for (int n = 0; n < 8; n++)
+            //{
+            //    projection.Axonometric(mVertices[n, 0], mVertices[n, 1],
+            //                    mVertices[n, 2], n);
+            //}
+
+
+            //for (int i = 0; i < 8; i++)
+            //{
+            //    for (int j = i; j < 8; j++)
+            //    {
+            //        if (mIndices[i, j] == 1)
+            //        {
+            //            canvas.drawLine(white,
+            //                                    projection.Transformation[i, 0],
+            //                                    projection.Transformation[i, 1],
+            //                                    projection.Transformation[j, 0],
+            //                                    projection.Transformation[j, 1]);
+            //        }
+            //    }
+            //}
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+
+
+
+
+
+            ////SIESTACAST
+            //int width = 800;
+            //int height = 600;
+
+            //Canvas canvas = new Canvas(width, height);
+            //Projection projection = new Projection();
+
+            //Color background = new Color(0, 0, 0);
+            //Color white = new Color(255, 255, 255);
+
+            //canvas.clearColor(background);
+
+            //int[,] mVertices = {
+            //            { 0, 0, 0 }, { 100, 0, 0 },
+            //            { 100, 0, 100 }, { 0, 0, 100 },
+            //            { 0, 100, 0 }, { 100, 100, 0 },
+            //            { 100, 100, 100 },{ 0, 100, 100 } };
+
+
+            //int[,] mIndices = {
+            //                              { 0, 1, 0, 1, 1, 0, 0, 0 },
+            //                              { 1, 0, 1, 0, 0, 1, 0, 0 },
+            //                              { 0, 1, 0, 1, 0, 0, 1, 0 },
+            //                              { 1, 0, 1, 0, 0, 0, 0, 1 },
+            //                              { 1, 0, 0, 0, 0, 1, 0, 1 },
+            //                              { 0, 1, 0, 0, 1, 0, 1, 0 },
+            //                              { 0, 0, 1, 0, 0, 1, 0, 1 },
+            //                              { 0, 0, 0, 1, 1, 0, 0, 0 },
+            //                          };
+
+
+            //for (int n = 0; n < 8; n++)
+            //{
+            //    projection.Perspective(mVertices[n, 0],
+            //                    mVertices[n, 1], mVertices[n, 2], n);
+            //}
+
+
+            //for (int i = 0; i < 8; i++)
+            //{
+            //    for (int j = i; j < 8; j++)
+            //    {
+            //        if (mIndices[i, j] == 1)
+            //        {
+            //            canvas.drawLine(white,
+            //                                    projection.Transformation[i, 0],
+            //                                    projection.Transformation[i, 1],
+            //                                    projection.Transformation[j, 0],
+            //                                    projection.Transformation[j, 1]);
+            //        }
+            //    }
+            //}
+
+            //canvas.render();
+            //System.Diagnostics.Process.Start("Frame.exe", "frame.ppm");
+        }
+    }
+}
+
+
+
+
+
 //Personal copy from original author David Barr
-
-
 /*
 OneLoneCoder.com - 3D Graphics Part #1 - Triangles & Projections
 "Tredimensjonal Grafikk" - @Javidx9
